@@ -39,13 +39,16 @@ async function initializeDatabase(persistence: DatabasePersistence) {
     await useKeyStore.getState().setValue("databaseKey", databaseKey);
   }
 
+  const urls = await fetch("/urls.json")
+    .then(res => res.json());
+  
   db.host({
-    API_HOST: "https://api.notesnook.com",
-    AUTH_HOST: "https://auth.streetwriters.co",
-    SSE_HOST: "https://events.streetwriters.co",
-    ISSUES_HOST: "https://issues.streetwriters.co",
-    MONOGRAPH_HOST: "https://monogr.ph",
-    SUBSCRIPTIONS_HOST: "https://subscriptions.streetwriters.co",
+    API_HOST: urls.API_HOST,
+    AUTH_HOST: urls.AUTH_HOST,
+    SSE_HOST: urls.SSE_HOST,
+    ISSUES_HOST: urls.ISSUES_HOST,
+    MONOGRAPH_HOST: urls.MONOGRAPH_HOST,
+    SUBSCRIPTIONS_HOST: urls.SUBSCRIPTIONS_HOST,
     ...Config.get("serverUrls", {})
   });
 
