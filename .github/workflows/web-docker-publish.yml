@@ -30,7 +30,7 @@ jobs:
 
       - name: Collect package metadata
         id: package_metadata
-        working-directory: ./apps/monograph
+        working-directory: ./apps/web
         run: |
           echo "app_version=$(cat package.json | jq -r .version)" >> $GITHUB_OUTPUT
 
