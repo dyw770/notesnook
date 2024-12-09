@@ -2,7 +2,7 @@ name: Publish Docker notesnook-web
 
 on:
   workflow_dispatch:
-  push: 
+  push:
 env:
   IMAGE_NAME: dyw770/notesnook-web
 
@@ -32,7 +32,6 @@ jobs:
         id: package_metadata
         working-directory: ./apps/monograph
         run: |
-          echo ::set-output name=app_version::$(cat package.json | jq -r .version)
           echo "name=$(cat package.json | jq -r .version)" >> $GITHUB_OUTPUT
 
       - name: Generate build
