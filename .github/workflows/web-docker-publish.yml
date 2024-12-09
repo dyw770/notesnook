@@ -33,6 +33,7 @@ jobs:
         working-directory: ./apps/monograph
         run: |
           echo ::set-output name=app_version::$(cat package.json | jq -r .version)
+          echo "name=$(cat package.json | jq -r .version)" >> $GITHUB_OUTPUT
 
       - name: Generate build
         run: npm run build:web
