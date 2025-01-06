@@ -49,6 +49,7 @@ import { hashNavigate } from "../navigation";
 import { AppEventManager, AppEvents } from "../common/app-events";
 import Vault from "../common/vault";
 import { Mutex } from "async-mutex";
+import { useEditorManager } from "../components/editor/manager";
 
 export enum SaveState {
   NotSaved = -1,
@@ -421,7 +422,7 @@ class EditorStore extends BaseStore<EditorStore> {
                 continue;
 
               updateSession(session.id, undefined, {
-                tags: await getTags(session.note.id)
+                tags: await db.notes.tags(session.note.id)
               });
             }
           } else if (
@@ -432,7 +433,7 @@ class EditorStore extends BaseStore<EditorStore> {
             event.item.toType === "note"
           ) {
             updateSession(event.item.toId, undefined, {
-              tags: await getTags(event.item.toId)
+              tags: await db.notes.tags(event.item.toId)
             });
           }
         } else if (event.collection === "tags") {
@@ -445,7 +446,7 @@ class EditorStore extends BaseStore<EditorStore> {
                 continue;
               console.log("UDPATE");
               updateSession(session.id, undefined, {
-                tags: await getTags(session.note.id)
+                tags: await db.notes.tags(session.note.id)
               });
             }
           }
@@ -500,6 +501,12 @@ class EditorStore extends BaseStore<EditorStore> {
 
     const session = this.get().sessions.find((s) => s.id === id);
     if (!session) id = undefined;
+
+    const activeSession = this.getActiveSession();
+
+    if (activeSession) {
+      this.saveSessionContentIfNotSaved(activeSession.id);
+    }
 
     if (
       id &&
@@ -671,7 +678,7 @@ class EditorStore extends BaseStore<EditorStore> {
         const attachmentsLength = await db.attachments
           .ofNote(note.id, "all")
           .count();
-        const tags = await getTags(note.id);
+        const tags = await db.notes.tags(note.id);
         const colors = await db.relations.to(note, "color").get();
         if (note.readonly) {
           this.addSession(
@@ -848,7 +855,6 @@ class EditorStore extends BaseStore<EditorStore> {
             sessionId
           });
         }
-
         setDocumentTitle(
           settingStore.get().hideNoteTitle ? undefined : note.title
         );
@@ -870,13 +876,39 @@ class EditorStore extends BaseStore<EditorStore> {
     });
   };
 
+  saveSessionContentIfNotSaved = (sessionId: string) => {
+    const sessionSaveState = this.getSession(sessionId, ["default"])?.saveState;
+    if (sessionSaveState === SaveState.NotSaved) {
+      const editor = useEditorManager.getState().getEditor(sessionId);
+      const content = editor?.editor?.getContent();
+      this.saveSession(
+        sessionId,
+        content
+          ? {
+              content: {
+                data: content,
+                type: "tiptap"
+              }
+            }
+          : {}
+      );
+    }
+  };
+
   newSession = () => {
-    this.addSession({
-      type: "new",
-      id: getId(),
-      context: useNoteStore.getState().context,
-      saveState: SaveState.NotSaved
-    });
+    const state = useEditorStore.getState();
+    const session = state.sessions.find((session) => session.type === "new");
+    if (session) {
+      session.context = useNoteStore.getState().context;
+      this.activateSession(session.id);
+    } else {
+      this.addSession({
+        type: "new",
+        id: getId(),
+        context: useNoteStore.getState().context,
+        saveState: SaveState.NotSaved
+      });
+    }
   };
 
   closeSessions = (...ids: string[]) => {
@@ -888,6 +920,8 @@ class EditorStore extends BaseStore<EditorStore> {
           sessions.push(session);
           continue;
         }
+
+        this.saveSessionContentIfNotSaved(session.id);
 
         db.fs().cancel(session.id).catch(console.error);
         if (state.history.includes(session.id))
@@ -1019,13 +1053,4 @@ async function waitForSync() {
   return new Promise((resolve) => {
     db.eventManager.subscribe(EVENTS.syncCompleted, resolve, true);
   });
-}
-
-async function getTags(noteId: string) {
-  return await db.relations
-    .to({ id: noteId, type: "note" }, "tag")
-    .selector.items(undefined, {
-      sortBy: "dateCreated",
-      sortDirection: "asc"
-    });
 }

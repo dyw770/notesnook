@@ -1,6 +1,6 @@
 {
   "name": "@notesnook/mobile",
-  "version": "3.0.23",
+  "version": "3.0.24",
   "private": true,
   "license": "GPL-3.0-or-later",
   "workspaces": [
@@ -43,8 +43,13 @@
     "@notesnook/logger": "file:../../packages/logger",
     "@notesnook/theme": "file:../../packages/theme",
     "@notesnook/themes-server": "file:../../servers/themes",
+    "@notesnook/crypto": "file:../../packages/crypto",
     "diffblazer": "^1.0.1",
     "react": "18.2.0",
-    "react-native": "0.74.5"
+    "react-native": "0.74.5",
+    "@trpc/client": "^10.45.2",
+    "@trpc/react-query": "^10.45.2",
+    "@trpc/server": "^10.45.2",
+    "@tanstack/react-query": "^4.36.1"
   }
 }

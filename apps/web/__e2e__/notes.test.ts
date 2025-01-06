@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import { test, expect } from "@playwright/test";
 import { AppModel } from "./models/app.model";
 import {
+  getTestId,
   groupByOptions,
   NOTE,
   orderByOptions,
@@ -222,6 +223,23 @@ test("add tags to note", async ({ page }) => {
   await app.goto();
   const notes = await app.goToNotes();
   await notes.createNote(NOTE);
+
+  await notes.editor.setTags(tags);
+  await page.waitForTimeout(200);
+
+  const noteTags = await notes.editor.getTags();
+  expect(noteTags).toHaveLength(tags.length);
+  expect(noteTags.every((t, i) => t === tags[i])).toBe(true);
+});
+
+test("add tags to locked note", async ({ page }) => {
+  const tags = ["incognito", "secret-stuff"];
+  const app = new AppModel(page);
+  await app.goto();
+  const notes = await app.goToNotes();
+  const note = await notes.createNote(NOTE);
+  await note?.contextMenu.lock(PASSWORD);
+  await note?.openLockedNote(PASSWORD);
 
   await notes.editor.setTags(tags);
   await page.waitForTimeout(200);

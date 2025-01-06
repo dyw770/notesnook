@@ -63,6 +63,7 @@ import useTablet from "../../hooks/use-tablet";
 import { TimeFormat } from "@notesnook/core";
 import { BuyDialog } from "../../dialogs/buy-dialog";
 import { EDITOR_ZOOM } from "./common";
+import { ScrollContainer } from "@notesnook/ui";
 
 export type OnChangeHandler = (
   content: () => string,
@@ -89,6 +90,7 @@ type TipTapProps = {
   ) => Promise<LinkAttributes | undefined>;
   onAttachFile?: (file: File) => void;
   onFocus?: () => void;
+  onAutoSaveDisabled: () => void;
   content?: () => string | undefined;
   readonly?: boolean;
   nonce?: number;
@@ -132,12 +134,11 @@ function TipTap(props: TipTapProps) {
     onInsertInternalLink,
     onContentChange,
     onFocus = () => {},
+    onAutoSaveDisabled,
     content,
     editorContainer,
     readonly,
     nonce,
-    isMobile,
-    isTablet,
     downloadOptions,
     fontSize,
     fontFamily,
@@ -347,6 +348,9 @@ function TipTap(props: TipTapProps) {
       (s) => s.editors[id]?.statistics?.words.total,
       (totalWords) => {
         autoSave.current = !totalWords || totalWords < MAX_AUTO_SAVEABLE_WORDS;
+        if (!autoSave.current) {
+          onAutoSaveDisabled();
+        }
       }
     );
     return () => {
@@ -366,18 +370,36 @@ function TipTap(props: TipTapProps) {
           zIndex: 2
         }}
       >
-        <Toolbar
-          editor={editor}
-          location={"top"}
-          sx={
-            isTablet || isMobile
-              ? { overflowX: "scroll", flexWrap: "nowrap" }
-              : {}
-          }
-          tools={toolbarConfig}
-          defaultFontFamily={fontFamily}
-          defaultFontSize={fontSize}
-        />
+        <ScrollContainer
+          className="toolbarScroll"
+          suppressScrollY
+          style={{ display: "flex" }}
+          trackStyle={() => ({
+            backgroundColor: "transparent",
+            "--ms-track-size": "6px"
+          })}
+          thumbStyle={() => ({ height: 3 })}
+          onWheel={(e) => {
+            const scrollcontainer = document.querySelector(
+              ".active .toolbarScroll"
+            );
+            if (!scrollcontainer) return;
+            if (e.deltaY > 0) scrollcontainer.scrollLeft += 100;
+            else if (e.deltaY < 0) scrollcontainer.scrollLeft -= 100;
+          }}
+        >
+          <Toolbar
+            editor={editor}
+            location={"top"}
+            sx={{
+              flexWrap: "unset",
+              overflowX: "unset"
+            }}
+            tools={toolbarConfig}
+            defaultFontFamily={fontFamily}
+            defaultFontSize={fontSize}
+          />
+        </ScrollContainer>
       </ScopedThemeProvider>
     </>
   );
@@ -580,7 +602,9 @@ function toIEditor(editor: Editor): IEditor {
         },
         { query: (a) => a.hash === hash, preventUpdate: true }
       ),
-    startSearch: () => editor.commands.startSearch()
+    startSearch: () => editor.commands.startSearch(),
+    getContent: () =>
+      getHTMLFromFragment(editor.state.doc.content, editor.schema)
   };
 }
 
